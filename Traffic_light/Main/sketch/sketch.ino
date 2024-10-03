@@ -146,14 +146,13 @@ void SetTimeGreen(uint8_t Time) {
 
 TrafficLight Traffic;
 void setup() {
- Serial.begin(9600);
+
  pinMode(Traffic.GetPinGreen(), OUTPUT);
 pinMode(Traffic.GetPinYellow(), OUTPUT);
 pinMode(Traffic.GetPinRed(), OUTPUT);
 }
 
 void loop() {
-Serial.print(Traffic.GetNewState());
-Serial.println(Traffic.GetCurrentState());
+
 Traffic.GoTrafficLight();
 }
