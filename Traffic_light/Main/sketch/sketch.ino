@@ -10,7 +10,7 @@ unsigned long TimeYellowRed = 3000;
 uint8_t PinRed = 11;
 uint8_t PinYellow = 12; 
 uint8_t PinGreen = 13;
-uint8_t NewState=0;
+uint8_t NewState=1;
 uint8_t CurrentState=0;
 unsigned long CurrentStateTime=0;
 
