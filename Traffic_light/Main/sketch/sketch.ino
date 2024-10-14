@@ -13,7 +13,7 @@
 #define PinGreenTraffic 11
 #define PinGreenPed 10
 #define PinRedPed 9
-
+#define PinButton 8
 
 
 class TrafficLight {
@@ -28,7 +28,7 @@ protected:
   uint8_t NewState = 0;
   uint8_t CurrentState = 3;
   unsigned long CurrentStateTime = 0;
-  bool PedestrianLightIsThere;
+  
 
   void NextState() {
     if (this->CurrentState < 3)
@@ -112,7 +112,10 @@ public:
     this->PinYellow = pinyellow;
     this->PinGreen = pingreen;
     this->NewState = startstate;
-    this->PedestrianLightIsThere = 0;
+    if (NewState=green)
+    this->CurrentState=yellowred
+    else
+    this->CurrentState=NewState-1
   }
 
 
@@ -128,13 +131,8 @@ public:
     return this->CurrentState;
   }
 
-  class PedestrianLight : TrafficLight {
-  protected:
 
-  }
-
-  void
-  SetTimeGreen(uint8_t Time) {
+ void SetTimeGreen(uint8_t Time) {
     this->TimeGreen = Time;
   }
   void SetTimeYellow(uint8_t Time) {
@@ -179,7 +177,22 @@ public:
   }
 };
 
-TrafficLight Traffic;
+class PedestrianLight: public TrafficLight{
+
+
+}
+
+
+
+TrafficLight Traffic(
+  Timegreen, 
+  Timered,
+  Timeyellow,
+  TimeyellowRed,
+  PinRedTraffic,
+  PinYellowTraffic,
+  PinRedTraffic,
+  red);
 void setup() {
   pinMode(Traffic.GetPinGreen(), OUTPUT);
   pinMode(Traffic.GetPinYellow(), OUTPUT);
