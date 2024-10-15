@@ -1,205 +1,183 @@
-#include <Arduino.h>
-#include <header.h>
-#define green 0
-#define yellow 1
-#define red 2
-#define yellowred 3
-#define Timegreen 3000
-#define Timered 3000
-#define Timeyellow 3000
-#define TimeyellowRed 3000
-#define PinRedTraffic 13
-#define PinYellowTraffic 12
-#define PinGreenTraffic 11
-#define PinGreenPed 10
-#define PinRedPed 9
-#define PinButton 8
+#define buttonPin  8        
+#define trafficRedPin  13    
+#define trafficYellowPin  12
+#define trafficGreenPin  11 
+#define pedestrianRedPin  10 
+#define pedestrianGreenPin  9 
 
+
+const unsigned long redTime = 5000;        
+const unsigned long yellowTime = 2000;     
+const unsigned long greenTime = 5000;      
+const unsigned long redYellowTime = 1000;  
+const unsigned long pedestrianGreenTime = redTime;
+
+#define GREEN_LIGHT 0
+#define YELLOW_LIGHT 1
+#define RED_LIGHT 2
+#define RED_YELLOW_LIGHT 3  // New state for Red + Yellow combination
+#define PEDESTRIAN_CROSSING 4
 
 class TrafficLight {
-protected:
-  unsigned long TimeGreen = 3000;
-  unsigned long TimeYellow = 3000;
-  unsigned long TimeRed = 3000;
-  unsigned long TimeYellowRed = 3000;
-  uint8_t PinRed = 13;
-  uint8_t PinYellow = 12;
-  uint8_t PinGreen = 11;
-  uint8_t NewState = 0;
-  uint8_t CurrentState = 3;
-  unsigned long CurrentStateTime = 0;
-  
+  private:
+    int redPin, yellowPin, greenPin;
+    unsigned long previousMillis;
+    int state; // To keep track of the current light state
+    bool pedestrianWaiting; // Flag for pedestrian button press
 
-  void NextState() {
-    if (this->CurrentState < 3)
-      this->NewState = this->NewState + 1;
-    else
-      this->NewState = 0;
-  }
-  void TurnOnGreen() {
-    digitalWrite(this->PinGreen, HIGH);
-    digitalWrite(this->PinRed, LOW);
-    digitalWrite(this->PinYellow, LOW);
-  }
-  void TurnOnRed() {
-    digitalWrite(PinGreen, LOW);
-    digitalWrite(PinRed, HIGH);
-    digitalWrite(PinYellow, LOW);
-  }
-  void TurnOnYellow() {
-    digitalWrite(PinGreen, LOW);
-    digitalWrite(PinRed, LOW);
-    digitalWrite(PinYellow, HIGH);
-  }
-  void TurnOnYellowRed() {
-    digitalWrite(PinGreen, LOW);
-    digitalWrite(PinRed, HIGH);
-    digitalWrite(PinYellow, HIGH);
-  }
-  unsigned long GetTime() {
-    switch (CurrentState) {
-      case green:
-        return TimeGreen;
-      case yellow:
-        return TimeYellow;
-      case red:
-        return TimeRed;
-      case yellowred:
-        return TimeYellowRed;
+  public:
+    TrafficLight(int rPin, int yPin, int gPin) : redPin(rPin), yellowPin(yPin), greenPin(gPin), state(RED_LIGHT), previousMillis(0), pedestrianWaiting(false) {
+      pinMode(redPin, OUTPUT);
+      pinMode(yellowPin, OUTPUT);
+      pinMode(greenPin, OUTPUT);
+      redLight();  // Start with the red light on
     }
-  }
-  void ChangeColour() {
-    if (NewState != CurrentState) {
-      this->CurrentState = NewState;
-      switch (CurrentState) {
-        case green:
-          TurnOnGreen();
+
+    void update(unsigned long currentMillis) {
+      if (pedestrianWaiting && state != PEDESTRIAN_CROSSING) {
+        state = PEDESTRIAN_CROSSING;
+        pedestrianWaiting = false;
+        previousMillis = currentMillis;
+        redLight();  // Traffic light turns red for pedestrian crossing
+      }
+
+      switch (state) {
+        case GREEN_LIGHT: // Green light
+          if (currentMillis - previousMillis >= greenTime) {
+            state = YELLOW_LIGHT;
+            previousMillis = currentMillis;
+            yellowLight();
+          }
           break;
-        case yellow:
-          TurnOnYellow();
+        case YELLOW_LIGHT: // Yellow light
+          if (currentMillis - previousMillis >= yellowTime) {
+            state = RED_LIGHT;
+            previousMillis = currentMillis;
+            redLight();
+          }
           break;
-        case red:
-          TurnOnRed();
+        case RED_LIGHT: // Red light
+          if (currentMillis - previousMillis >= redTime) {
+            state = RED_YELLOW_LIGHT;  // Transition to Red + Yellow state
+            previousMillis = currentMillis;
+            redYellowLight();
+          }
           break;
-        case yellowred:
-          TurnOnYellowRed();
+        case RED_YELLOW_LIGHT: // Red + Yellow light
+          if (currentMillis - previousMillis >= redYellowTime) {
+            state = GREEN_LIGHT;  // Transition to Green light
+            previousMillis = currentMillis;
+            greenLight();
+          }
+          break;
+        case PEDESTRIAN_CROSSING:
+          if (currentMillis - previousMillis >= pedestrianGreenTime) {
+            state = RED_YELLOW_LIGHT;  // Resume to Red + Yellow
+            previousMillis = currentMillis;
+            redYellowLight();
+          }
           break;
       }
     }
-  }
-  checkTime() {
-    if (millis() - this->CurrentStateTime >= GetTime()) {
-      NextState();
-      this->CurrentStateTime = millis();
+
+    void redLight() {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(yellowPin, LOW);
+      digitalWrite(greenPin, LOW);
     }
-  }
 
-public:
-  TrafficLight(
-    unsigned long timegreen,
-    unsigned long timered,
-    unsigned long timeyellow,
-    unsigned long timeyellowred,
-    uint8_t pinred,
-    uint8_t pingreen,
-    uint8_t pingyellow,
-    uint8_t startstate) {
-    this->TimeGreen = timegreen;
-    this->TimeYellow = timered;
-    this->TimeRed = timeyellow;
-    this->TimeYellowRed = timeyellowred;
-    this->PinRed = pinred;
-    this->PinYellow = pinyellow;
-    this->PinGreen = pingreen;
-    this->NewState = startstate;
-    if (NewState=green)
-    this->CurrentState=yellowred
-    else
-    this->CurrentState=NewState-1
-  }
+    void yellowLight() {
+      digitalWrite(redPin, LOW);
+      digitalWrite(yellowPin, HIGH);
+      digitalWrite(greenPin, LOW);
+    }
 
+    void greenLight() {
+      digitalWrite(redPin, LOW);
+      digitalWrite(yellowPin, LOW);
+      digitalWrite(greenPin, HIGH);
+    }
 
-  void GoTrafficLight() {
-    checkTime();
-    ChangeColour();
-  }
+    void redYellowLight() {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(yellowPin, HIGH);
+      digitalWrite(greenPin, LOW);
+    }
 
-  uint8_t GetNewState() {
-    return this->NewState;
-  }
-  uint8_t GetCurrentState() {
-    return this->CurrentState;
-  }
+    void triggerPedestrianCrossing() {
+      pedestrianWaiting = true;
+    }
 
+    bool isRed() {
+      return state == RED_LIGHT; // Return true if the current light is red
+    }
 
- void SetTimeGreen(uint8_t Time) {
-    this->TimeGreen = Time;
-  }
-  void SetTimeYellow(uint8_t Time) {
-    this->TimeYellow = Time;
-  }
-  void SetTimeRed(uint8_t Time) {
-    this->TimeRed = Time;
-  }
-  void SetYellowRed(uint8_t Time) {
-    this->TimeYellowRed = Time;
-  }
-
-  uint8_t GetTimeGreen() {
-    return this->TimeGreen;
-  }
-  uint8_t GetTimeYellow() {
-    return this->TimeYellow;
-  }
-  uint8_t GetTimeRed() {
-    return this->TimeRed;
-  }
-  uint8_t GetYellowRed() {
-    return this->TimeYellowRed;
-  }
-  uint8_t GetPinGreen() {
-    return this->PinGreen;
-  }
-  uint8_t GetPinYellow() {
-    return this->PinYellow;
-  }
-  uint8_t GetPinRed() {
-    return this->PinRed;
-  }
-  void SetPinGreen(uint8_t Pin) {
-    this->PinGreen = Pin;
-  }
-  void SetPinYellow(uint8_t Pin) {
-    this->PinYellow = Pin;
-  }
-  void SetPinRed(uint8_t Pin) {
-    this->PinRed = Pin;
-  }
+    bool isPedestrianCrossing() {
+      return state == PEDESTRIAN_CROSSING;  // Check if in pedestrian crossing state
+    }
 };
 
-class PedestrianLight: public TrafficLight{
+class PedestrianLight {
+  private:
+    int redPin, greenPin;
+    bool active;
+    unsigned long previousMillis;
 
+  public:
+    PedestrianLight(int rPin, int gPin) : redPin(rPin), greenPin(gPin), active(false), previousMillis(0) {
+      pinMode(rPin, OUTPUT);
+      pinMode(gPin, OUTPUT);
+      redLight();  // Start with the red light on
+    }
 
-}
+    void update(unsigned long currentMillis) {
+      if (active && currentMillis - previousMillis >= pedestrianGreenTime) {
+        active = false;
+        redLight();  // Pedestrian crossing ends, red light for pedestrians
+      }
+    }
 
+    void redLight() {
+      digitalWrite(redPin, HIGH);
+      digitalWrite(greenPin, LOW);
+    }
 
+    void greenLight() {
+      digitalWrite(redPin, LOW);
+      digitalWrite(greenPin, HIGH);
+    }
 
-TrafficLight Traffic(
-  Timegreen, 
-  Timered,
-  Timeyellow,
-  TimeyellowRed,
-  PinRedTraffic,
-  PinYellowTraffic,
-  PinRedTraffic,
-  red);
+    void activate(unsigned long currentMillis) {
+      active = true;
+      previousMillis = currentMillis;
+      greenLight();  // Pedestrian green light on
+    }
+
+    bool isActive() {
+      return active;
+    }
+};
+
+// Instances of TrafficLight and PedestrianLight
+TrafficLight traffic(trafficRedPin, trafficYellowPin, trafficGreenPin);
+PedestrianLight pedestrian(pedestrianRedPin, pedestrianGreenPin);
+
 void setup() {
-  pinMode(Traffic.GetPinGreen(), OUTPUT);
-  pinMode(Traffic.GetPinYellow(), OUTPUT);
-  pinMode(Traffic.GetPinRed(), OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);  // Setup button with internal pull-up resistor
 }
 
 void loop() {
+  unsigned long currentMillis = millis(); // Get the current time
 
-  Traffic.GoTrafficLight();
+  // Check if the pedestrian button is pressed
+  if (digitalRead(buttonPin) == LOW && !pedestrian.isActive()) {
+    traffic.triggerPedestrianCrossing();    // Interrupt traffic light for pedestrian crossing
+    pedestrian.activate(currentMillis);     // Activate pedestrian light
+  }
+
+  // Update the traffic light behavior
+  traffic.update(currentMillis);
+
+  // Update the pedestrian light behavior
+  pedestrian.update(currentMillis);
 }
