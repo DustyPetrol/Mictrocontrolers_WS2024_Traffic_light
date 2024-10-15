@@ -1,9 +1,10 @@
-#define buttonPin  8        
-#define trafficRedPin  13    
-#define trafficYellowPin  12
-#define trafficGreenPin  11 
-#define pedestrianRedPin  10 
-#define pedestrianGreenPin  9 
+#include <Arduino.h>
+#define buttonPin 8        
+#define trafficRedPin 13    
+#define trafficYellowPin 12
+#define trafficGreenPin 11 
+#define pedestrianRedPin 10 
+#define pedestrianGreenPin 9 
 
 
 const unsigned long redTime = 5000;        
@@ -15,41 +16,55 @@ const unsigned long pedestrianGreenTime = redTime;
 #define GREEN_LIGHT 0
 #define YELLOW_LIGHT 1
 #define RED_LIGHT 2
-#define RED_YELLOW_LIGHT 3  // New state for Red + Yellow combination
+#define RED_YELLOW_LIGHT 3 
 #define PEDESTRIAN_CROSSING 4
+#define YELLOW_TO_RED 5  
 
 class TrafficLight {
   private:
     int redPin, yellowPin, greenPin;
     unsigned long previousMillis;
-    int state; // To keep track of the current light state
-    bool pedestrianWaiting; // Flag for pedestrian button press
+    int state; 
+    bool pedestrianWaiting; 
 
   public:
-    TrafficLight(int rPin, int yPin, int gPin) : redPin(rPin), yellowPin(yPin), greenPin(gPin), state(RED_LIGHT), previousMillis(0), pedestrianWaiting(false) {
+    TrafficLight(int rPin, int yPin, int gPin) : 
+    redPin(rPin), 
+    yellowPin(yPin), 
+    greenPin(gPin), 
+    state(RED_LIGHT), 
+    previousMillis(0), 
+    pedestrianWaiting(false) {
       pinMode(redPin, OUTPUT);
       pinMode(yellowPin, OUTPUT);
       pinMode(greenPin, OUTPUT);
-      redLight();  // Start with the red light on
+      redLight();  
     }
 
     void update(unsigned long currentMillis) {
-      if (pedestrianWaiting && state != PEDESTRIAN_CROSSING) {
-        state = PEDESTRIAN_CROSSING;
-        pedestrianWaiting = false;
-        previousMillis = currentMillis;
-        redLight();  // Traffic light turns red for pedestrian crossing
+      // Handle pedestrian request logic
+      if (pedestrianWaiting && state != PEDESTRIAN_CROSSING && state != YELLOW_TO_RED) {
+        if (state == RED_LIGHT) {
+          state = PEDESTRIAN_CROSSING;
+          previousMillis = currentMillis;
+          pedestrianWaiting = false;
+        } else {
+          state = YELLOW_TO_RED;
+          previousMillis = currentMillis;
+          pedestrianWaiting = false;
+          yellowLight();
+        }
       }
 
       switch (state) {
-        case GREEN_LIGHT: // Green light
+        case GREEN_LIGHT: 
           if (currentMillis - previousMillis >= greenTime) {
             state = YELLOW_LIGHT;
             previousMillis = currentMillis;
             yellowLight();
           }
           break;
-        case YELLOW_LIGHT: // Yellow light
+        case YELLOW_LIGHT: 
           if (currentMillis - previousMillis >= yellowTime) {
             state = RED_LIGHT;
             previousMillis = currentMillis;
@@ -58,21 +73,28 @@ class TrafficLight {
           break;
         case RED_LIGHT: // Red light
           if (currentMillis - previousMillis >= redTime) {
-            state = RED_YELLOW_LIGHT;  // Transition to Red + Yellow state
+            state = RED_YELLOW_LIGHT; 
             previousMillis = currentMillis;
             redYellowLight();
           }
           break;
         case RED_YELLOW_LIGHT: // Red + Yellow light
           if (currentMillis - previousMillis >= redYellowTime) {
-            state = GREEN_LIGHT;  // Transition to Green light
+            state = GREEN_LIGHT; 
             previousMillis = currentMillis;
             greenLight();
           }
           break;
+        case YELLOW_TO_RED: 
+          if (currentMillis - previousMillis >= yellowTime) {
+            state = PEDESTRIAN_CROSSING;
+            previousMillis = currentMillis;
+            redLight();  
+          }
+          break;
         case PEDESTRIAN_CROSSING:
           if (currentMillis - previousMillis >= pedestrianGreenTime) {
-            state = RED_YELLOW_LIGHT;  // Resume to Red + Yellow
+            state = RED_YELLOW_LIGHT;  
             previousMillis = currentMillis;
             redYellowLight();
           }
@@ -109,11 +131,11 @@ class TrafficLight {
     }
 
     bool isRed() {
-      return state == RED_LIGHT; // Return true if the current light is red
+      return state == RED_LIGHT; 
     }
 
     bool isPedestrianCrossing() {
-      return state == PEDESTRIAN_CROSSING;  // Check if in pedestrian crossing state
+      return state == PEDESTRIAN_CROSSING;  
     }
 };
 
@@ -127,13 +149,20 @@ class PedestrianLight {
     PedestrianLight(int rPin, int gPin) : redPin(rPin), greenPin(gPin), active(false), previousMillis(0) {
       pinMode(rPin, OUTPUT);
       pinMode(gPin, OUTPUT);
-      redLight();  // Start with the red light on
+      redLight();  
     }
 
-    void update(unsigned long currentMillis) {
+    void update(unsigned long currentMillis, bool carRed, bool carPedestrianCrossing) {
+      
+      if (active && carPedestrianCrossing) {
+        greenLight();
+      } else {
+        redLight();
+      }
+
       if (active && currentMillis - previousMillis >= pedestrianGreenTime) {
         active = false;
-        redLight();  // Pedestrian crossing ends, red light for pedestrians
+        redLight(); 
       }
     }
 
@@ -150,7 +179,6 @@ class PedestrianLight {
     void activate(unsigned long currentMillis) {
       active = true;
       previousMillis = currentMillis;
-      greenLight();  // Pedestrian green light on
     }
 
     bool isActive() {
@@ -158,26 +186,44 @@ class PedestrianLight {
     }
 };
 
-// Instances of TrafficLight and PedestrianLight
-TrafficLight traffic(trafficRedPin, trafficYellowPin, trafficGreenPin);
-PedestrianLight pedestrian(pedestrianRedPin, pedestrianGreenPin);
+
+class TFSystem {
+  private:
+    TrafficLight traffic;
+    PedestrianLight pedestrian;
+
+  public:
+    TFSystem(int trafficRed, 
+    int trafficYellow, 
+    int trafficGreen, 
+    int pedRed, 
+    int pedGreen) 
+    : traffic(trafficRed, trafficYellow, trafficGreen), pedestrian(pedRed, pedGreen) {
+      pinMode(buttonPin, INPUT_PULLUP);  
+    }
+
+    void update(unsigned long currentMillis) {
+      if (digitalRead(buttonPin) == LOW && !pedestrian.isActive() && !traffic.isPedestrianCrossing()) {
+        traffic.triggerPedestrianCrossing();    
+        pedestrian.activate(currentMillis);     
+      }
+
+      // Update the traffic light behavior
+      traffic.update(currentMillis);
+
+      // Update the pedestrian light behavior, only allowing green during pedestrian crossing
+      pedestrian.update(currentMillis, traffic.isRed(), traffic.isPedestrianCrossing());
+    }
+};
+
+// Create the TFSystem instance with all pins
+TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin, pedestrianRedPin, pedestrianGreenPin);
 
 void setup() {
-  pinMode(buttonPin, INPUT_PULLUP);  // Setup button with internal pull-up resistor
+  // Nothing needed here for now
 }
 
 void loop() {
   unsigned long currentMillis = millis(); // Get the current time
-
-  // Check if the pedestrian button is pressed
-  if (digitalRead(buttonPin) == LOW && !pedestrian.isActive()) {
-    traffic.triggerPedestrianCrossing();    // Interrupt traffic light for pedestrian crossing
-    pedestrian.activate(currentMillis);     // Activate pedestrian light
-  }
-
-  // Update the traffic light behavior
-  traffic.update(currentMillis);
-
-  // Update the pedestrian light behavior
-  pedestrian.update(currentMillis);
+  trafficSystem.update(currentMillis);    // Update the traffic and pedestrian lights
 }
