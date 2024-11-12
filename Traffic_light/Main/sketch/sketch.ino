@@ -208,10 +208,10 @@ class TFSystem {
         pedestrian.activate(currentMillis);     
       }
 
-      // Update the traffic light behavior
+      
       traffic.update(currentMillis);
 
-      // Update the pedestrian light behavior, only allowing green during pedestrian crossing
+     
       pedestrian.update(currentMillis, traffic.isRed(), traffic.isPedestrianCrossing());
     }
 };
@@ -220,10 +220,10 @@ class TFSystem {
 TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin, pedestrianRedPin, pedestrianGreenPin);
 
 void setup() {
-  // Nothing needed here for now
+  Serial1.begin(9600);
 }
 
 void loop() {
-  unsigned long currentMillis = millis(); // Get the current time
-  trafficSystem.update(currentMillis);    // Update the traffic and pedestrian lights
+  unsigned long currentMillis = millis();
+  trafficSystem.update(currentMillis);    
 }
