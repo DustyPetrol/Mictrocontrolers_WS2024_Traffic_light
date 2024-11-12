@@ -26,6 +26,7 @@ class TrafficLight {
     unsigned long previousMillis;
     int state; 
     bool pedestrianWaiting; 
+    int ReceavedMessage;
 
   public:
     TrafficLight(int rPin, int yPin, int gPin) : 
@@ -42,7 +43,13 @@ class TrafficLight {
     }
 
     void update(unsigned long currentMillis) {
-      // Handle pedestrian request logic
+     
+
+      if (Serial.available() > 0) {
+      ReceavedMessage=Serial.read();
+      }
+      else
+      ReceavedMessage=0;
       if (pedestrianWaiting && state != PEDESTRIAN_CROSSING && state != YELLOW_TO_RED) {
         if (state == RED_LIGHT) {
           state = PEDESTRIAN_CROSSING;
@@ -93,7 +100,9 @@ class TrafficLight {
           }
           break;
         case PEDESTRIAN_CROSSING:
-          if (currentMillis - previousMillis >= pedestrianGreenTime) {
+         // if (currentMillis - previousMillis >= pedestrianGreenTime) {old thing}
+          if (ReceavedMessage==200) {
+            ReceavedMessage=0;
             state = RED_YELLOW_LIGHT;  
             previousMillis = currentMillis;
             redYellowLight();
@@ -139,88 +148,39 @@ class TrafficLight {
     }
 };
 
-class PedestrianLight {
-  private:
-    int redPin, greenPin;
-    bool active;
-    unsigned long previousMillis;
 
-  public:
-    PedestrianLight(int rPin, int gPin) : redPin(rPin), greenPin(gPin), active(false), previousMillis(0) {
-      pinMode(rPin, OUTPUT);
-      pinMode(gPin, OUTPUT);
-      redLight();  
-    }
-
-    void update(unsigned long currentMillis, bool carRed, bool carPedestrianCrossing) {
-      
-      if (active && carPedestrianCrossing) {
-        greenLight();
-      } else {
-        redLight();
-      }
-
-      if (active && currentMillis - previousMillis >= pedestrianGreenTime) {
-        active = false;
-        redLight(); 
-      }
-    }
-
-    void redLight() {
-      digitalWrite(redPin, HIGH);
-      digitalWrite(greenPin, LOW);
-    }
-
-    void greenLight() {
-      digitalWrite(redPin, LOW);
-      digitalWrite(greenPin, HIGH);
-    }
-
-    void activate(unsigned long currentMillis) {
-      active = true;
-      previousMillis = currentMillis;
-    }
-
-    bool isActive() {
-      return active;
-    }
-};
 
 
 class TFSystem {
   private:
     TrafficLight traffic;
-    PedestrianLight pedestrian;
 
   public:
     TFSystem(int trafficRed, 
     int trafficYellow, 
-    int trafficGreen, 
-    int pedRed, 
-    int pedGreen) 
-    : traffic(trafficRed, trafficYellow, trafficGreen), pedestrian(pedRed, pedGreen) {
+    int trafficGreen) 
+    : traffic(trafficRed, trafficYellow, trafficGreen) {
       pinMode(buttonPin, INPUT_PULLUP);  
     }
 
     void update(unsigned long currentMillis) {
-      if (digitalRead(buttonPin) == LOW && !pedestrian.isActive() && !traffic.isPedestrianCrossing()) {
-        traffic.triggerPedestrianCrossing();    
-        pedestrian.activate(currentMillis);     
+      if (digitalRead(buttonPin) == LOW  && !traffic.isPedestrianCrossing()) {
+        Serial.print(100);
+        traffic.triggerPedestrianCrossing();        
       }
 
       
       traffic.update(currentMillis);
 
-     
-      pedestrian.update(currentMillis, traffic.isRed(), traffic.isPedestrianCrossing());
     }
 };
 
-// Create the TFSystem instance with all pins
-TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin, pedestrianRedPin, pedestrianGreenPin);
+
+TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin);
 
 void setup() {
-  Serial1.begin(9600);
+ 
+  Serial.begin(9600);
 }
 
 void loop() {
