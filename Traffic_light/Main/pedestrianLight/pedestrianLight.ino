@@ -15,7 +15,7 @@ void setup() {
   Serial.begin(9600);    
 }
 
-// Class to handle pedestrian light functions
+
 class PedestrianLight {
 private:
   uint8_t redPin, greenPin;          

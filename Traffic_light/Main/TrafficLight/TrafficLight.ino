@@ -162,9 +162,6 @@ class TrafficLight {
     }
 
     
-    bool isRed() {
-      return state == RED_LIGHT;
-    }
 
    
     bool isPedestrianCrossing() {
