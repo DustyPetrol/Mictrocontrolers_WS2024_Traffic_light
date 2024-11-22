@@ -67,8 +67,8 @@ public:
 
 
   void activate(unsigned long currentMillis) {
-    active = true;                        // Set active flag
-    previousMillis = currentMillis;       // Store the current time for timing reference
+    active = true;                        
+    previousMillis = currentMillis;      
   }
 
  
