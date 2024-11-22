@@ -40,7 +40,6 @@ public:
       }
   
     if (ReceavedMessage == 100 && !active) {
-      while
       activate(currentMillis);            
       ReceavedMessage = 0;               
       greenLight();                      
