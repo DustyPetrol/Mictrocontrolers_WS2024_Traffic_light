@@ -20,7 +20,8 @@ const unsigned long pedestrianGreenTime = redTime;
 #define RED_YELLOW_LIGHT 3
 #define PEDESTRIAN_CROSSING 4
 #define YELLOW_TO_RED 5
-#define MessageToSend 100
+#define MessageToSendRed 100
+#define MessageToSendPedestrian 101
 #define MessageToRecieve 200
 
 void setup() {
@@ -243,6 +244,7 @@ class TFSystem {
       if (digitalRead(buttonPin) == LOW && !traffic.isPedestrianCrossing()) {          
         traffic.triggerPedestrianCrossing(); 
         pedestrian.isActive();
+        Serial.write(MessageToSendPedestrian);
       }
        while (Serial.available() > 0) {
         MessageToPass=Serial.read();
