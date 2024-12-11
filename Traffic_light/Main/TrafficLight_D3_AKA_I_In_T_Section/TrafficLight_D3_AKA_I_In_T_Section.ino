@@ -47,8 +47,7 @@ class TrafficLight {
     
     void update(unsigned long currentMillis) {
       
-      if (state!=RED_LIGHT& recieveMessage==101)
-      state = YELLOW_LIGHT;
+
       
       switch (state) {
         case GREEN_LIGHT: 
