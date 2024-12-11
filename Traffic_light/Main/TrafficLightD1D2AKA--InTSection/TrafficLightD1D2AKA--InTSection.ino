@@ -13,7 +13,7 @@ const unsigned long yellowTime = 2000;
 const unsigned long greenTime = 5000;     
 const unsigned long redYellowTime = 1000;  
 const unsigned long pedestrianGreenTime = redTime;   
-
+// Define states for traffic light control
 #define GREEN_LIGHT 0
 #define YELLOW_LIGHT 1
 #define RED_LIGHT 2
@@ -261,5 +261,5 @@ TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin,pedestri
 
 void loop() {
   unsigned long currentMillis = millis();   
- trafficSystem.update(currentMillis);
+ trafficSystem.update();
 }
