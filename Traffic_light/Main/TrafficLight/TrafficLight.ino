@@ -82,7 +82,6 @@ class TrafficLight {
           if (currentMillis - previousMillis >= yellowTime) {
             state = RED_LIGHT;
             previousMillis = currentMillis;
-            IsThereAMessage = true;
             redLight();
           }
           break;
@@ -92,7 +91,7 @@ class TrafficLight {
             previousMillis = currentMillis;
             redYellowLight();
           }
-           SendMessageD3(); // might be problematic, if is - put this in the end of yellow light and remove the flag
+           SendMessageD3(); // might be problematic, if is - put this in the end of yellow light and figure out the flag
           break;
         case RED_YELLOW_LIGHT: 
           if (currentMillis - previousMillis >= redYellowTime) {
