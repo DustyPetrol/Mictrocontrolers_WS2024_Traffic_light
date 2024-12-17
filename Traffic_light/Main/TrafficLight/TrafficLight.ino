@@ -1,4 +1,5 @@
 #include <Arduino.h>    
+#include <Wire.h>
 
 #define buttonPin 8                
 #define trafficRedPin 13           
@@ -18,8 +19,14 @@ const unsigned long pedestrianGreenTime = redTime;
 #define RED_YELLOW_LIGHT 3
 #define PEDESTRIAN_CROSSING 4
 #define YELLOW_TO_RED 5
-#define MessageToSend 100
-#define MessageToRecieve 200
+#define MessageToSendPedestrian 100
+#define MessageToRecievePedestrian 200
+#define MessageToSendD3 103
+#define MessageToRecieveD3 203
+#define D1D2Adress 1
+#define PedestrianAdress 2
+#define D3Adress 3
+
 
 
 class TrafficLight {
@@ -48,7 +55,7 @@ class TrafficLight {
 
     
     void update(unsigned long currentMillis) {
-      
+      //button handling
       if (pedestrianWaiting && state != PEDESTRIAN_CROSSING && state != YELLOW_TO_RED) {
         if (state == RED_LIGHT) {
           state = PEDESTRIAN_CROSSING;        
@@ -75,15 +82,17 @@ class TrafficLight {
           if (currentMillis - previousMillis >= yellowTime) {
             state = RED_LIGHT;
             previousMillis = currentMillis;
+            IsThereAMessage = true;
             redLight();
           }
           break;
         case RED_LIGHT:
-          if (currentMillis - previousMillis >= redTime) {
+          if  (ReceavedMessage == MessageToRecieveD3) {
             state = RED_YELLOW_LIGHT;
             previousMillis = currentMillis;
             redYellowLight();
           }
+           SendMessageD3(); // might be problematic, if is - put this in the end of yellow light and remove the flag
           break;
         case RED_YELLOW_LIGHT: 
           if (currentMillis - previousMillis >= redYellowTime) {
@@ -100,8 +109,8 @@ class TrafficLight {
           }
           break;
         case PEDESTRIAN_CROSSING:
-          SendMessage();
-          if (ReceavedMessage == MessageToRecieve) {
+          SendMessagePedestrian();
+          if (ReceavedMessage == MessageToRecievePedestrian) {
             ReceavedMessage = 0;
             state = RED_YELLOW_LIGHT;
             previousMillis = currentMillis;
@@ -124,9 +133,20 @@ class TrafficLight {
 
 
    
-    void SendMessage() {
+    void SendMessagePedestrian() {
       if (IsThereAMessage) {
-        Serial.write(MessageToSend);
+         Wire.beginTransmission(PedestrianAdress); // transmit to device #4
+         Wire.write(MessageToSendPedestrian);        
+         Wire.endTransmission();    
+        IsThereAMessage = false;
+      }
+    }
+
+    void SendMessageD3() {
+      if (IsThereAMessage) {
+         Wire.beginTransmission(D3Adress); // transmit to device #4
+         Wire.write(MessageToSendD3);        
+         Wire.endTransmission();    
         IsThereAMessage = false;
       }
     }
@@ -175,24 +195,29 @@ class TFSystem {
     TrafficLight traffic;
     uint8_t MessageToPass;
 
+
   public:
     TFSystem(int trafficRed, int trafficYellow, int trafficGreen) 
     : traffic(trafficRed, trafficYellow, trafficGreen) {
       pinMode(buttonPin, INPUT_PULLUP); 
     }
-
+     //in this part figure out message handling, try not to make it more bloated.
     void update(unsigned long currentMillis) {
       if (digitalRead(buttonPin) == LOW && !traffic.isPedestrianCrossing()) {
         traffic.ThereIsAMessage();          
         traffic.triggerPedestrianCrossing(); 
       }
-       while (Serial.available() > 0) {
-        MessageToPass=Serial.read();
+      if (MessageToPass!=0) {
         traffic.recieveMessage(MessageToPass);
-      } 
+        traffic.ThereIsAMessage(); 
+        MessageToPass=0;
+      }
 
 
       traffic.update(currentMillis);        
+    }
+    void WeGotMessage(int8_t MessageWeGot){
+    MessageToPass=MessageWeGot;
     }
 };
 
@@ -200,10 +225,17 @@ class TFSystem {
 TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin);
 
 void setup() {
-  Serial.begin(9600);    
+  Wire.begin(D1D2Adress);    
+  Wire.onReceive(receiveEvent);
 }
 
 void loop() {
   unsigned long currentMillis = millis();   
   trafficSystem.update(currentMillis);       
+}
+
+void receiveEvent()
+{
+  int8_t Message = Wire.read();    
+  trafficSystem.WeGotMessage(Message);
 }
