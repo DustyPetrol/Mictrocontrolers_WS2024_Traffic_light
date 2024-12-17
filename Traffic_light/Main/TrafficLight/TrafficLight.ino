@@ -237,4 +237,5 @@ void receiveEvent()
 {
   int8_t Message = Wire.read();    
   trafficSystem.WeGotMessage(Message);
+  Message=0;
 }

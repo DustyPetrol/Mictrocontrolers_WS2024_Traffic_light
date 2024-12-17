@@ -1,8 +1,16 @@
 #include <Arduino.h>   
-
+#include <Wire.h>
 
 #define pedestrianRedPin 10    
 #define pedestrianGreenPin 9  
+#define MessageToSendPedestrian 200
+#define MessageToRecievePedestrian 100
+#define MessageToSendD3 203
+#define MessageToRecieveD3 103
+#define D1D2Adress 1
+#define PedestrianAdress 2
+#define D3Adress 3
+
 
 // Define timing constants (in milliseconds)
 const unsigned long redTime = 5000;         
@@ -12,7 +20,8 @@ const unsigned long redYellowTime = 1000;
 const unsigned long pedestrianGreenTime = redTime;  
 
 void setup() {
-  Serial.begin(9600);    
+  Wire.begin(D1D2Adress);    
+  Wire.onReceive(receiveEvent);   
 }
 
 
@@ -35,11 +44,9 @@ public:
   
   void update(unsigned long currentMillis) {
   
-    while (Serial.available() > 0){
-      ReceavedMessage = Serial.read();   
-      }
+    
   
-    if (ReceavedMessage == 100 && !active) {
+    if (ReceavedMessage == MessageToRecievePedestrian && !active) {
       activate(currentMillis);            
       ReceavedMessage = 0;               
       greenLight();                      
@@ -47,12 +54,19 @@ public:
 
     
     if (active && currentMillis - previousMillis >= pedestrianGreenTime) {
+      SendMessagePedestrian();
       active = false;                    
       redLight();                        
-      Serial.write(200);                 
+      Serial.write(MessageToSendPedestrian);                 
     }
   }
-
+   void SendMessagePedestrian() {
+      
+         Wire.beginTransmission(D1D2Adress); // transmit to device #4
+         Wire.write(MessageToSendPedestrian);        
+         Wire.endTransmission();    
+      
+    }
  
   void redLight() {
     digitalWrite(redPin, HIGH);
@@ -75,6 +89,9 @@ public:
   bool isActive() {
     return active;
   }
+     void WeGotMessage(int8_t MessageWeGot){
+    ReceavedMessage=MessageWeGot;
+    }
 };
 
 
@@ -83,4 +100,11 @@ PedestrianLight pedestrian(pedestrianRedPin, pedestrianGreenPin);
 void loop() {
   unsigned long currentMillis = millis();   
   pedestrian.update(currentMillis);        
+}
+
+void receiveEvent()
+{
+  int8_t Message = Wire.read();    
+  pedestrian.WeGotMessage(Message);
+  Message=0;
 }
