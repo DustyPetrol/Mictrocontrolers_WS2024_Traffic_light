@@ -20,7 +20,7 @@ const unsigned long redYellowTime = 1000;
 const unsigned long pedestrianGreenTime = redTime;  
 
 void setup() {
-  Wire.begin(D1D2Adress);    
+  Wire.begin(PedestrianAdress);    
   Wire.onReceive(receiveEvent);   
 }
 
