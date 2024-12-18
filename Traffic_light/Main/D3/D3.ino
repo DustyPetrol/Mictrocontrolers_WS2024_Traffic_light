@@ -163,12 +163,12 @@ class TFSystem {
     : traffic(trafficRed, trafficYellow, trafficGreen) {
       pinMode(buttonPin, INPUT_PULLUP); 
     }
-    
-      if (MessageToPass!=0) {
+    void update(unsigned long currentMillis){
+    if (MessageToPass!=0) {
         traffic.recieveMessage(MessageToPass);
         traffic.ThereIsAMessage(); 
         MessageToPass=0;
-      }
+      }  
 
 
       traffic.update(currentMillis);        
