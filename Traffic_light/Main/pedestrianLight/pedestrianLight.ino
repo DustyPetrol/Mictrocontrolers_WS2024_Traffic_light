@@ -96,14 +96,15 @@ void loop() {
 }
 
 void receiveEvent()
-{
+{ if (!pedestrian.isActive()){
   int8_t Message = Wire.read();    
   pedestrian.SetMessage(Message);
   Message=0;
 }
+}
 void requestEvent() {
   if (!pedestrian.isActive())
-  Wire.write(MessageToSendD3);
+  Wire.write(MessageToSendPedestrian);
   else
   Wire.write(0);
 }

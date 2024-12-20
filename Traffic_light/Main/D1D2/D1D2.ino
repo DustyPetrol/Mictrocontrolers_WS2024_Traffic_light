@@ -12,6 +12,7 @@ const unsigned long yellowTime = 2000;
 const unsigned long greenTime = 5000;
 const unsigned long redYellowTime = 1000;
 const unsigned long pedestrianGreenTime = redTime;
+const unsigned long I2CRequestTimeOut = 1000;
 // Define states for traffic light control
 #define GREEN_LIGHT 0
 #define YELLOW_LIGHT 1
@@ -22,11 +23,12 @@ const unsigned long pedestrianGreenTime = redTime;
 #define MessageToSendPedestrian 100
 #define MessageToRecievePedestrian 200
 #define MessageToSendD3 103
+#define MessageToSendD3PedestrianMode 133
 #define MessageToRecieveD3 203
 #define D1D2Adress null
 #define PedestrianAdress 2
 #define D3Adress 3
-#define I2CRequestTimeOut 100
+
 
 
 
@@ -51,14 +53,18 @@ class TrafficLight {
       pinMode(redPin, OUTPUT);
       pinMode(yellowPin, OUTPUT);
       pinMode(greenPin, OUTPUT);
-      redLight();
+      redYellowLight();
     }
 
 
 void update(unsigned long currentMillis) {
+
+
   //button handling
   if (pedestrianWaiting && state != PEDESTRIAN_CROSSING && state != YELLOW_TO_RED) {
     if (state == RED_LIGHT) {
+      SendMessageD3AboutPedestrian();
+      delay(yellowTime*2);
       state = PEDESTRIAN_CROSSING;
       previousMillis = currentMillis;
       pedestrianWaiting = false;
@@ -84,18 +90,23 @@ void update(unsigned long currentMillis) {
         state = RED_LIGHT;
         previousMillis = currentMillis;
         redLight();
+        ThereIsAMessage() ;
       }
       break;
     case RED_LIGHT:
-      
-      if (currentMillis - previousMillis >= I2CRequestTimeOut && ReceavedMessage != MessageToRecieveD3) {
-          SendMessageD3();   
-          Wire.requestFrom(PedestrianAdress, 1);
+        
+
+      if ( currentMillis - previousMillis >= I2CRequestTimeOut&& ReceavedMessage != MessageToRecieveD3) {
+          SendMessageD3(); 
+          
+          Serial.println("i am requesting a message from D3");  
+          Wire.requestFrom(D3Adress , 1);
           ReceavedMessage = Wire.read(); 
           previousMillis = currentMillis;
-         }
-         
-      if  (ReceavedMessage == MessageToRecieveD3) {
+        }
+
+      if  ( ReceavedMessage == MessageToRecieveD3) {
+         Serial.println("i recieved the message from the D3");
         state = RED_YELLOW_LIGHT;
         previousMillis = currentMillis;
         ReceavedMessage = 0;
@@ -117,23 +128,25 @@ void update(unsigned long currentMillis) {
         redLight();
       }
       break;
+      
     case PEDESTRIAN_CROSSING:
      
      if (currentMillis - previousMillis >= I2CRequestTimeOut && ReceavedMessage != MessageToRecievePedestrian) {
        
           SendMessagePedestrian();
+          delay(I2CRequestTimeOut);
           Wire.requestFrom(PedestrianAdress, 1);
+          Serial.println("i am requesting a message from ped");
           ReceavedMessage = Wire.read(); 
           previousMillis = currentMillis;
          }
       
       if (ReceavedMessage == MessageToRecievePedestrian) {
-        
+        Serial.println("i recieved a message from ped");
         ReceavedMessage = 0;
         state = RED_YELLOW_LIGHT;
         previousMillis = currentMillis;
         redYellowLight();
-        pedestrianWaiting = false;
       }
       break;
   }
@@ -156,8 +169,18 @@ void SendMessagePedestrian() {
     Wire.beginTransmission(PedestrianAdress); 
     Wire.write(MessageToSendPedestrian);
     Wire.endTransmission();
+    Serial.println("i am sending a message to ped");
     IsThereAMessage = false;
   }
+}
+
+// the next function goes agains my beliefs, but i am so tired
+void SendMessageD3AboutPedestrian() {
+
+    Wire.beginTransmission(D3Adress); 
+    Wire.write(MessageToSendD3PedestrianMode);
+    Wire.endTransmission();
+    Serial.println("i am sending a message to D3 about ped");
 }
 
 void SendMessageD3() {
@@ -165,6 +188,7 @@ void SendMessageD3() {
     Wire.beginTransmission(D3Adress);
     Wire.write(MessageToSendD3);
     Wire.endTransmission();
+     Serial.println("i am sending a message to d3");
     IsThereAMessage = false;
   }
 }
@@ -219,8 +243,11 @@ class TFSystem {
       : traffic(trafficRed, trafficYellow, trafficGreen) {
       pinMode(buttonPin, INPUT_PULLUP);
     }
+
+    
     //in this part figure out message handling, try not to make it more bloated.
     void update(unsigned long currentMillis) {
+       
       if (digitalRead(buttonPin) == LOW && !traffic.isPedestrianCrossing()) {
         traffic.ThereIsAMessage();
         traffic.triggerPedestrianCrossing();
@@ -230,10 +257,8 @@ class TFSystem {
         traffic.ThereIsAMessage();
         MessageToPass = 0;
       // i dont have time already, just make it ask  both of them all the time, and make them answer only when they have something to say
-
-
-      traffic.update(currentMillis);
     }
+     traffic.update(currentMillis);
     }
     void WeGotMessage(int8_t MessageWeGot) {
       MessageToPass = MessageWeGot;
@@ -246,6 +271,8 @@ TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin);
 
 void setup() {
   Wire.begin();
+  Serial.begin(9600);
+  Serial.println("serial started");
 }
 
 void loop() {

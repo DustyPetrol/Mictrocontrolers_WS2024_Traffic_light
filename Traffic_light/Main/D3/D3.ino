@@ -26,7 +26,7 @@ const unsigned long pedestrianGreenTime = redTime;
 #define D1D2Adress 1
 #define PedestrianAdress 2
 #define D3Adress 3
-
+#define MessageToSendD3PedestrianMode 133
 
 
 class TrafficLight {
@@ -60,6 +60,9 @@ class TrafficLight {
       
       
       switch (state) {
+
+      
+        
         case GREEN_LIGHT: 
           if (currentMillis - previousMillis >= greenTime) {
             state = YELLOW_LIGHT;
@@ -78,9 +81,10 @@ class TrafficLight {
           if  (ReceavedMessage == MessageToRecieveD3) {
             state = RED_YELLOW_LIGHT;
             previousMillis = currentMillis;
+            ReceavedMessage=0;
             redYellowLight();
           }
-           SendMessageD3(); // might be problematic, if is - put this in the end of yellow light and figure out the flag
+           
           break;
         case RED_YELLOW_LIGHT: 
           if (currentMillis - previousMillis >= redYellowTime) {
@@ -93,27 +97,13 @@ class TrafficLight {
     }
 //workin dis
    
-    void ThereIsAMessage() {
-      IsThereAMessage = true;
-    }
+    
 
    void recieveMessage(uint8_t message){
     ReceavedMessage=message;
    }
 
-
-
-
-    void SendMessageD3() {
-      if (IsThereAMessage) {
-         Wire.beginTransmission(D1D2Adress); // transmit to device #4
-         Wire.write(MessageToSendD3);        
-         Wire.endTransmission();    
-        IsThereAMessage = false;
-      }
-    }
-
-    
+ 
     void redLight() {
       digitalWrite(redPin, HIGH);
       digitalWrite(yellowPin, LOW);
@@ -125,7 +115,7 @@ class TrafficLight {
       digitalWrite(yellowPin, HIGH);
       digitalWrite(greenPin, LOW);
     }
-
+     
     void greenLight() {
       digitalWrite(redPin, LOW);
       digitalWrite(yellowPin, LOW);
@@ -144,6 +134,11 @@ class TrafficLight {
     bool isRED_LIGHT() {
       return state == RED_LIGHT;
     }
+    
+    void SetYellow(){
+       state = YELLOW_LIGHT;
+          yellowLight();
+    }
 };
 
 
@@ -161,15 +156,13 @@ class TFSystem {
     void update(unsigned long currentMillis){
     if (MessageToPass!=0) {
         traffic.recieveMessage(MessageToPass);
-        traffic.ThereIsAMessage(); 
+       
         MessageToPass=0;
-      }  
-
-
-      traffic.update(currentMillis);        
+      } 
+      traffic.update(currentMillis);         
     }
     
-    void WeGotMessage(int8_t MessageWeGot){
+    void SetMessage(int8_t MessageWeGot){
     MessageToPass=MessageWeGot;
     }
 
@@ -178,6 +171,12 @@ class TFSystem {
     {
       return traffic.isRED_LIGHT();
     }
+
+    void SetYellowForTF(){
+      traffic.SetYellow();
+    }
+
+    
 };
 
 
@@ -198,7 +197,9 @@ void loop() {
 void receiveEvent()
 {
   int8_t Message = Wire.read();    
-  trafficSystem.WeGotMessage(Message);
+  trafficSystem.SetMessage(Message);
+  if(MessageToSendD3PedestrianMode)
+  
   Message=0;
 }
 
