@@ -22,6 +22,7 @@ const unsigned long pedestrianGreenTime = redTime;
 void setup() {
   Wire.begin(PedestrianAdress);    
   Wire.onReceive(receiveEvent);   
+  Wire.onRequest(requestEvent); 
 }
 
 
@@ -54,19 +55,11 @@ public:
 
     
     if (active && currentMillis - previousMillis >= pedestrianGreenTime) {
-      SendMessagePedestrian();
       active = false;                    
-      redLight();                        
-      Serial.write(MessageToSendPedestrian);                 
+      redLight();                                       
     }
   }
-   void SendMessagePedestrian() {
-      
-         Wire.beginTransmission(D1D2Adress); // transmit to device #4
-         Wire.write(MessageToSendPedestrian);        
-         Wire.endTransmission();    
-      
-    }
+
  
   void redLight() {
     digitalWrite(redPin, HIGH);
@@ -89,7 +82,7 @@ public:
   bool isActive() {
     return active;
   }
-     void WeGotMessage(int8_t MessageWeGot){
+     void SetMessage(int8_t MessageWeGot){
     ReceavedMessage=MessageWeGot;
     }
 };
@@ -105,6 +98,12 @@ void loop() {
 void receiveEvent()
 {
   int8_t Message = Wire.read();    
-  pedestrian.WeGotMessage(Message);
+  pedestrian.SetMessage(Message);
   Message=0;
+}
+void requestEvent() {
+  if (!pedestrian.isActive())
+  Wire.write(MessageToSendD3);
+  else
+  Wire.write(0);
 }

@@ -139,15 +139,10 @@ class TrafficLight {
     }
 
     
-    void triggerPedestrianCrossing() {
-      pedestrianWaiting = true;
-    }
-
-    
 
    
-    bool isPedestrianCrossing() {
-      return state == PEDESTRIAN_CROSSING;
+    bool isRED_LIGHT() {
+      return state == RED_LIGHT;
     }
 };
 
@@ -173,8 +168,15 @@ class TFSystem {
 
       traffic.update(currentMillis);        
     }
+    
     void WeGotMessage(int8_t MessageWeGot){
     MessageToPass=MessageWeGot;
+    }
+
+
+    bool IsRedLight()
+    {
+      return traffic.isRED_LIGHT();
     }
 };
 
@@ -184,11 +186,13 @@ TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin);
 void setup() {
   Wire.begin(D3Adress);    
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent); 
 }
 
 void loop() {
   unsigned long currentMillis = millis();   
-  trafficSystem.update(currentMillis);       
+  trafficSystem.update(currentMillis);  
+       
 }
 
 void receiveEvent()
@@ -196,4 +200,11 @@ void receiveEvent()
   int8_t Message = Wire.read();    
   trafficSystem.WeGotMessage(Message);
   Message=0;
+}
+
+void requestEvent() {
+  if (trafficSystem.IsRedLight())
+  Wire.write(MessageToSendD3);
+  else
+  Wire.write(0);
 }
