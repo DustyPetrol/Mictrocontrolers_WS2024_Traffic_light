@@ -23,9 +23,10 @@ const unsigned long pedestrianGreenTime = redTime;
 #define MessageToRecievePedestrian 200
 #define MessageToSendD3 103
 #define MessageToRecieveD3 203
-#define D1D2Adress 1
+#define D1D2Adress null
 #define PedestrianAdress 2
 #define D3Adress 3
+#define I2CRequestTimeOut 100
 
 
 
@@ -86,15 +87,21 @@ void update(unsigned long currentMillis) {
       }
       break;
     case RED_LIGHT:
-
-
+      
+      if (currentMillis - previousMillis >= I2CRequestTimeOut && ReceavedMessage != MessageToRecieveD3) {
+          SendMessageD3();   
+          Wire.requestFrom(PedestrianAdress, 1);
+          ReceavedMessage = Wire.read(); 
+          previousMillis = currentMillis;
+         }
+         
       if  (ReceavedMessage == MessageToRecieveD3) {
         state = RED_YELLOW_LIGHT;
         previousMillis = currentMillis;
         ReceavedMessage = 0;
         redYellowLight();
       }
-      SendMessageD3(); // might be problematic, if is - put this in the end of yellow light and figure out the flag
+      
       break;
     case RED_YELLOW_LIGHT:
       if (currentMillis - previousMillis >= redYellowTime) {
@@ -111,11 +118,17 @@ void update(unsigned long currentMillis) {
       }
       break;
     case PEDESTRIAN_CROSSING:
-      while (ReceavedMessage != 0) {
-        Wire.requestFrom(PedestrianAdress, 1);
-      }
-      SendMessagePedestrian();
+     
+     if (currentMillis - previousMillis >= I2CRequestTimeOut && ReceavedMessage != MessageToRecievePedestrian) {
+       
+          SendMessagePedestrian();
+          Wire.requestFrom(PedestrianAdress, 1);
+          ReceavedMessage = Wire.read(); 
+          previousMillis = currentMillis;
+         }
+      
       if (ReceavedMessage == MessageToRecievePedestrian) {
+        
         ReceavedMessage = 0;
         state = RED_YELLOW_LIGHT;
         previousMillis = currentMillis;
@@ -125,7 +138,7 @@ void update(unsigned long currentMillis) {
       break;
   }
 }
-//workin dis
+
 
 void ThereIsAMessage() {
   IsThereAMessage = true;
@@ -140,7 +153,7 @@ void recieveMessage(uint8_t message) {
 
 void SendMessagePedestrian() {
   if (IsThereAMessage) {
-    Wire.beginTransmission(PedestrianAdress); // transmit to device #4
+    Wire.beginTransmission(PedestrianAdress); 
     Wire.write(MessageToSendPedestrian);
     Wire.endTransmission();
     IsThereAMessage = false;
@@ -149,7 +162,7 @@ void SendMessagePedestrian() {
 
 void SendMessageD3() {
   if (IsThereAMessage) {
-    Wire.beginTransmission(D3Adress); // transmit to device #4
+    Wire.beginTransmission(D3Adress);
     Wire.write(MessageToSendD3);
     Wire.endTransmission();
     IsThereAMessage = false;
@@ -221,9 +234,11 @@ class TFSystem {
 
       traffic.update(currentMillis);
     }
+    }
     void WeGotMessage(int8_t MessageWeGot) {
       MessageToPass = MessageWeGot;
     }
+    
 };
 
 
@@ -231,7 +246,6 @@ TFSystem trafficSystem(trafficRedPin, trafficYellowPin, trafficGreenPin);
 
 void setup() {
   Wire.begin();
-  Wire.onReceive(receiveEvent);
 }
 
 void loop() {
